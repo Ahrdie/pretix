@@ -572,6 +572,10 @@ class Quota(LoggedModel):
         if size_left <= 0:
             return Quota.AVAILABILITY_RESERVED, 0
 
+        size_left -= self.count_waiting_list_pending()
+        if size_left <= 0:
+            return Quota.AVAILABILITY_RESERVED, 0
+
         return Quota.AVAILABILITY_OK, size_left
 
     def count_blocking_vouchers(self, now_dt: datetime=None) -> int:
@@ -590,6 +594,13 @@ class Quota(LoggedModel):
         ).values('id').aggregate(
             free=Sum(Func(F('max_usages') - F('redeemed'), 0, function=func))
         )['free'] or 0
+
+    def count_waiting_list_pending(self) -> int:
+        from pretix.base.models import WaitingListEntry
+        return WaitingListEntry.objects.filter(
+            Q(voucher__isnull=True) &
+            self._position_lookup
+        ).distinct().count()
 
     def count_in_cart(self, now_dt: datetime=None) -> int:
         from pretix.base.models import CartPosition

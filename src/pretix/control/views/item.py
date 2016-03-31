@@ -620,7 +620,11 @@ class QuotaView(ChartContainingView, DetailView):
             {
                 'label': ugettext('Current user\'s carts'),
                 'value': self.object.count_in_cart()
-            }
+            },
+            {
+                'label': ugettext('Waiting list'),
+                'value': self.object.count_waiting_list_pending()
+            },
         ]
         ctx['quota_table_rows'] = list(data)
 
