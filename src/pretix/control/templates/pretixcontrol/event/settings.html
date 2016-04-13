@@ -41,6 +41,19 @@
             {% bootstrap_field sform.attendee_names_asked layout="horizontal" %}
             {% bootstrap_field sform.attendee_names_required layout="horizontal" %}
             {% bootstrap_field sform.cancel_allow_user layout="horizontal" %}
+            {% bootstrap_field sform.waiting_list_enabled layout="horizontal" %}
+        </fieldset>
+        <fieldset>
+            <legend>{% trans "Invoicing" %}</legend>
+            {% bootstrap_field sform.invoice_address_asked layout="horizontal" %}
+            {% bootstrap_field sform.invoice_address_required layout="horizontal" %}
+            {% bootstrap_field sform.invoice_address_vatid layout="horizontal" %}
+            {% bootstrap_field sform.tax_rate_default layout="horizontal" %}
+            {% bootstrap_field sform.invoice_generate layout="horizontal" %}
+            {% bootstrap_field sform.invoice_language layout="horizontal" %}
+            {% bootstrap_field sform.invoice_address_from layout="horizontal" %}
+            {% bootstrap_field sform.invoice_additional_text layout="horizontal" %}
+>>>>>>> 78d3517e... more steps
         </fieldset>
         <div class="form-group submit-group">
             <button type="submit" class="btn btn-primary btn-save">

@@ -132,6 +132,10 @@ DEFAULTS = {
         'default': 'False',
         'type': bool
     },
+    'waiting_list_enabled': {
+        'default': 'False',
+        'type': bool
+    },
     'ticket_download': {
         'default': 'False',
         'type': bool
