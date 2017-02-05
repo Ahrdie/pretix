@@ -1,6 +1,11 @@
+from django.contrib import messages
+from django.shortcuts import redirect
+from django.urls import reverse
+from django.utils.translation import ugettext_lazy as _
 from django.views.generic import ListView
 
 from pretix.base.models import Item, WaitingListEntry
+from pretix.base.models.waitinglist import WaitingListException
 
 
 class WaitingListView(ListView):
@@ -9,6 +14,30 @@ class WaitingListView(ListView):
     paginate_by = 30
     template_name = 'pretixcontrol/waitinglist/index.html'
     permission = 'can_view_orders'
+
+    def post(self, request, *args, **kwargs):
+        if 'assign' in request.POST:
+            try:
+                wle = WaitingListEntry.objects.get(
+                    pk=request.POST.get('assign'), event=self.request.event,
+                )
+                try:
+                    wle.send_voucher()
+                except WaitingListException as e:
+                    messages.error(request, str(e))
+                else:
+                    messages.success(request, _('An email containing a voucher code has been sent to the '
+                                                'specified address.'))
+                return redirect(reverse('control:event.orders.waitinglist', kwargs={
+                    'event': request.event.slug,
+                    'organizer': request.event.organizer.slug
+                }))
+            except WaitingListEntry.DoesNotExist:
+                messages.error(request, _('Waiting list entry not found.'))
+                return redirect(reverse('control:event.orders.waitinglist', kwargs={
+                    'event': request.event.slug,
+                    'organizer': request.event.organizer.slug
+                }))
 
     def get_queryset(self):
         qs = WaitingListEntry.objects.filter(

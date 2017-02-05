@@ -1,10 +1,22 @@
+from datetime import timedelta
+
 from django.core.exceptions import ValidationError
-from django.db import models
+from django.db import models, transaction
+from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
+
+from pretix.base.i18n import language
+from pretix.base.models import Voucher
+from pretix.base.services.mail import mail
+from pretix.multidomain.urlreverse import build_absolute_uri
 
 from .base import LoggedModel
 from .event import Event
 from .items import Item, ItemVariation
+
+
+class WaitingListException(Exception):
+    pass
 
 
 class WaitingListEntry(LoggedModel):
@@ -41,6 +53,10 @@ class WaitingListEntry(LoggedModel):
             "The variation of the product selected above."
         )
     )
+    locale = models.CharField(
+        max_length=190,
+        default='en'
+    )
 
     class Meta:
         verbose_name = _("Waiting list entry")
@@ -58,3 +74,46 @@ class WaitingListEntry(LoggedModel):
                                     'you as soon as we have a ticket available for you.'))
         if not self.variation and self.item.has_variations:
             raise ValidationError(_('Please select a specific variation of this product.'))
+
+    def send_voucher(self, quota_cache=None):
+        availability = (
+            self.variation.check_quotas(count_waitinglist=False, _cache=quota_cache)
+            if self.variation
+            else self.item.check_quotas(count_waitinglist=False, _cache=quota_cache)
+        )
+        if availability[0] != 100:
+            raise WaitingListException(_('This product is currently not available.'))
+        if self.voucher:
+            raise WaitingListException(_('A voucher has already been sent to this person.'))
+
+        with transaction.atomic():
+            v = Voucher.objects.create(
+                event=self.event,
+                max_usages=1,
+                valid_until=now() + timedelta(hours=self.event.settings.waiting_list_hours),
+                item=self.item,
+                variation=self.variation,
+                tag='waiting-list',
+                comment=_('Automatically created from waiting list entry for {email}').format(
+                    email=self.email
+                ),
+                block_quota=True,
+            )
+            self.voucher = v
+            self.save()
+
+        with language(self.locale):
+            mail(
+                self.email,
+                _('You have been selected from the waitinglist for {event}').format(event=str(self.event)),
+                self.event.settings.mail_text_waiting_list,
+                {
+                    'event': self.event.name,
+                    'url': build_absolute_uri(self.event, 'presale:event.redeem') + '?voucher=' + self.voucher.code,
+                    'code': self.voucher.code,
+                    'product': str(self.item) + (' - ' + str(self.variation) if self.variation else ''),
+                    'hours': self.event.settings.waiting_list_hours,
+                },
+                self.event,
+                locale=self.locale
+            )

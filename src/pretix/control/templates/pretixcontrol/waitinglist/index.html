@@ -5,7 +5,7 @@
 {% block title %}{% trans "Waiting list" %}{% endblock %}
 {% block content %}
     <h1>{% trans "Waiting list" %}</h1>
-    {% if not event.settings.waiting_list_enabled %}
+    {% if not request.event.settings.waiting_list_enabled %}
         <div class="alert alert-danger">
             {% trans "The waiting list is disabled, so if the event is sold out, people cannot add themselves to this list. If you want to enable it, go to the event settings." %}
         </div>
@@ -32,45 +32,55 @@
         <button class="btn btn-primary" type="submit">{% trans "Filter" %}</button>
     </form>
     </p>
-    {% include "pretixcontrol/pagination.html" %}
-    <div class="table-responsive">
-        <table class="table table-condensed table-hover">
-            <thead>
-            <tr>
-                <th>{% trans "User" %}</th>
-                <th>{% trans "Product" %}</th>
-                <th>{% trans "On the list since" %}</th>
-                <th>{% trans "Status" %}</th>
-            </tr>
-            </thead>
-            <tbody>
-            {% for e in entries %}
+    <form method="post" action="">
+        {% csrf_token %}
+        <div class="table-responsive">
+            <table class="table table-condensed table-hover">
+                <thead>
                 <tr>
-                    <td>{{ e.email }}</td>
-                    <td>
-                        {{ e.item }}
-                        {% if e.variation %}
-                            – {{ e.variation }}
-                        {% endif %}
-                    </td>
-                    <td>{{ e.created|date:"SHORT_DATETIME_FORMAT" }}</td>
-                    <td>
-                        {% if e.voucher %}
-                            <span class="label label-success">{% trans "Voucher assigned" %}</span>
-                        {% elif e.availability.0 == 100 %}
-                            <span class="label label-warning">
+                    <th>{% trans "User" %}</th>
+                    <th>{% trans "Product" %}</th>
+                    <th>{% trans "On the list since" %}</th>
+                    <th>{% trans "Status" %}</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for e in entries %}
+                    <tr>
+                        <td>{{ e.email }}</td>
+                        <td>
+                            {{ e.item }}
+                            {% if e.variation %}
+                                – {{ e.variation }}
+                            {% endif %}
+                        </td>
+                        <td>{{ e.created|date:"SHORT_DATETIME_FORMAT" }}</td>
+                        <td>
+                            {% if e.voucher %}
+                                <span class="label label-success">{% trans "Voucher assigned" %}</span>
+                            {% elif e.availability.0 == 100 %}
+                                <span class="label label-warning">
                                 {% blocktrans with num=e.availability.1 %}
                                     Waiting, product {{ num }}x available
                                 {% endblocktrans %}
                             </span>
-                        {% else %}
-                            <span class="label label-danger">{% trans "Waiting, product unavailable" %}</span>
-                        {% endif %}
-                    </td>
-                </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-    </div>
+                            {% else %}
+                                <span class="label label-danger">{% trans "Waiting, product unavailable" %}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-right">
+                            {% if not e.voucher and e.availability.0 == 100 %}
+                                <button name="assign" value="{{ e.pk }}" class="btn btn-default btn-xs">
+                                    {% trans "Send a voucher" %}
+                                </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </form>
     {% include "pretixcontrol/pagination.html" %}
 {% endblock %}

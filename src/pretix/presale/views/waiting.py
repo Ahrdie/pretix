@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.shortcuts import redirect
+from django.utils import translation
 from django.utils.functional import cached_property
 from django.utils.translation import ugettext_lazy as _
 from django.views.generic import FormView
@@ -18,7 +19,7 @@ class WaitingView(FormView):
         kwargs['event'] = self.request.event
         kwargs['instance'] = WaitingListEntry(
             item=self.item_and_variation[0], variation=self.item_and_variation[1],
-            event=self.request.event
+            event=self.request.event, locale=translation.get_language()
         )
         return kwargs
 
