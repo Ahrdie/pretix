@@ -231,7 +231,7 @@ class Item(LoggedModel):
             return False
         return True
 
-    def check_quotas(self, ignored_quotas=None, _cache=None):
+    def check_quotas(self, ignored_quotas=None, count_waitinglist=True, _cache=None):
         """
         This method is used to determine whether this Item is currently available
         for sale.
@@ -253,7 +253,7 @@ class Item(LoggedModel):
         if self.variations.count() > 0:  # NOQA
             raise ValueError('Do not call this directly on items which have variations '
                              'but call this on their ItemVariation objects')
-        return min([q.availability(_cache=_cache) for q in check_quotas],
+        return min([q.availability(count_waitinglist=count_waitinglist, _cache=_cache) for q in check_quotas],
                    key=lambda s: (s[0], s[1] if s[1] is not None else sys.maxsize))
 
     @cached_property
@@ -315,7 +315,7 @@ class ItemVariation(models.Model):
         if self.item:
             self.item.event.get_cache().clear()
 
-    def check_quotas(self, ignored_quotas=None, _cache=None) -> Tuple[int, int]:
+    def check_quotas(self, ignored_quotas=None, count_waitinglist=True, _cache=None) -> Tuple[int, int]:
         """
         This method is used to determine whether this ItemVariation is currently
         available for sale in terms of quotas.
@@ -324,6 +324,7 @@ class ItemVariation(models.Model):
                                quotas will be ignored in the calculation. If this leads
                                to no quotas being checked at all, this method will return
                                unlimited availability.
+        :param count_waitinglist: If ``False``, waiting list entries will be ignored for quota calculation.
         :returns: any of the return codes of :py:meth:`Quota.availability()`.
         """
         check_quotas = set(self.quotas.all())
@@ -331,7 +332,7 @@ class ItemVariation(models.Model):
             check_quotas -= set(ignored_quotas)
         if not check_quotas:
             return Quota.AVAILABILITY_OK, sys.maxsize
-        return min([q.availability(_cache=_cache) for q in check_quotas],
+        return min([q.availability(count_waitinglist=count_waitinglist, _cache=_cache) for q in check_quotas],
                    key=lambda s: (s[0], s[1] if s[1] is not None else sys.maxsize))
 
     def __lt__(self, other):

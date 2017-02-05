@@ -52,7 +52,7 @@ class WaitingListEntry(LoggedModel):
 
     def clean(self):
         if WaitingListEntry.objects.filter(
-            item=self.item, variation=self.variation, email=self.email
+            item=self.item, variation=self.variation, email=self.email, voucher__isnull=True
         ).exclude(pk=self.pk).exists():
             raise ValidationError(_('You are already on this waiting list! We will notify '
                                     'you as soon as we have a ticket available for you.'))

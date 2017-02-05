@@ -5,6 +5,11 @@
 {% block title %}{% trans "Waiting list" %}{% endblock %}
 {% block content %}
     <h1>{% trans "Waiting list" %}</h1>
+    {% if not event.settings.waiting_list_enabled %}
+        <div class="alert alert-danger">
+            {% trans "The waiting list is disabled, so if the event is sold out, people cannot add themselves to this list. If you want to enable it, go to the event settings." %}
+        </div>
+    {% endif %}
     <p>
     <form class="form-inline helper-display-inline" action="" method="get">
         <select name="status" class="form-control">
@@ -52,8 +57,14 @@
                     <td>
                         {% if e.voucher %}
                             <span class="label label-success">{% trans "Voucher assigned" %}</span>
+                        {% elif e.availability.0 == 100 %}
+                            <span class="label label-warning">
+                                {% blocktrans with num=e.availability.1 %}
+                                    Waiting, product {{ num }}x available
+                                {% endblocktrans %}
+                            </span>
                         {% else %}
-                            <span class="label label-warning">{% trans "Waiting" %}</span>
+                            <span class="label label-danger">{% trans "Waiting, product unavailable" %}</span>
                         {% endif %}
                     </td>
                 </tr>
