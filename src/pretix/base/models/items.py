@@ -534,7 +534,7 @@ class Quota(LoggedModel):
         if self.event:
             self.event.get_cache().clear()
 
-    def availability(self, now_dt: datetime=None, _cache=None) -> Tuple[int, int]:
+    def availability(self, now_dt: datetime=None, count_waitinglist=True, _cache=None) -> Tuple[int, int]:
         """
         This method is used to determine whether Items or ItemVariations belonging
         to this quota should currently be available for sale.
@@ -542,14 +542,18 @@ class Quota(LoggedModel):
         :returns: a tuple where the first entry is one of the ``Quota.AVAILABILITY_`` constants
                   and the second is the number of available tickets.
         """
+        if _cache and count_waitinglist is not _cache.get('_count_waitinglist', True):
+            _cache.clear()
+
         if _cache is not None and self.pk in _cache:
             return _cache[self.pk]
-        res = self._availability(now_dt)
+        res = self._availability(now_dt, count_waitinglist)
         if _cache is not None:
             _cache[self.pk] = res
+            _cache['_count_waitinglist'] = count_waitinglist
         return res
 
-    def _availability(self, now_dt: datetime=None):
+    def _availability(self, now_dt: datetime=None, count_waitinglist=True):
         now_dt = now_dt or now()
         size_left = self.size
         if size_left is None:
@@ -572,9 +576,10 @@ class Quota(LoggedModel):
         if size_left <= 0:
             return Quota.AVAILABILITY_RESERVED, 0
 
-        size_left -= self.count_waiting_list_pending()
-        if size_left <= 0:
-            return Quota.AVAILABILITY_RESERVED, 0
+        if count_waitinglist:
+            size_left -= self.count_waiting_list_pending()
+            if size_left <= 0:
+                return Quota.AVAILABILITY_RESERVED, 0
 
         return Quota.AVAILABILITY_OK, size_left
 

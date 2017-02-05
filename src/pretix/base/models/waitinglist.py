@@ -24,7 +24,7 @@ class WaitingListEntry(LoggedModel):
     voucher = models.ForeignKey(
         'Voucher',
         verbose_name=_("Assigned voucher"),
-        default=False
+        null=True, blank=True
     )
     item = models.ForeignKey(
         Item, related_name='waitinglistentries',
@@ -45,6 +45,7 @@ class WaitingListEntry(LoggedModel):
     class Meta:
         verbose_name = _("Waiting list entry")
         verbose_name_plural = _("Waiting list entries")
+        ordering = ['created']
 
     def __str__(self):
         return '%s waits for %s' % (str(self.email), str(self.item))
@@ -55,3 +56,5 @@ class WaitingListEntry(LoggedModel):
         ).exclude(pk=self.pk).exists():
             raise ValidationError(_('You are already on this waiting list! We will notify '
                                     'you as soon as we have a ticket available for you.'))
+        if not self.variation and self.item.has_variations:
+            raise ValidationError(_('Please select a specific variation of this product.'))
